@@ -1,5 +1,5 @@
 # Small-Projects
-Thsi repository involves most of the small project that were used for learning basics.
+This repository contains most of the small projects used for learning the basics.
 
 Pomodoro Timer 
 

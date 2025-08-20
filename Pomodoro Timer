@@ -1,0 +1,33 @@
+Pomodoro Timer 
+
+A simple Pomodoro Timer web app built with HTML, CSS, and JavaScript.
+This app helps you boost productivity by breaking work into intervals (25 minutes focus + 5 minutes break).
+
+Features
+25-minute focus timer
+5-minute break timer
+Start, Pause, and Reset buttons
+Circular design with a modern UI
+Fully responsive
+
+📂 Project Structure
+pomodoro-app/
+│── index.html   # Main HTML file
+│── style.css    # Styling
+│── script.js    # Timer functionality
+└── README.md    # Project description
+
+🛠️ Tech Stack
+
+HTML5 – Structure
+
+CSS3 – Styling & layout
+
+JavaScript (Vanilla JS) – Timer functionality
+
+
+Clone/download this repository
+
+Open index.html in your browser
+
+Click Start and get productive!

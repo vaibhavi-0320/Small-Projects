@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pomodoro Timer</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#121821; --muted:#8aa0b3; --text:#e8f0f7; --accent:#6ee7b7; --accent-2:#60a5fa; --danger:#f87171;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 80% -200px, #111b27 0%, var(--bg) 55%);
+      color:var(--text); display:grid; place-items:center; padding:24px;
+    }
+    .app{width:min(920px, 94vw); background:linear-gradient(180deg, #121821, #0f151d); border:1px solid #1f2a36; border-radius:20px; padding:24px; box-shadow:0 10px 40px rgba(0,0,0,.45)}
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px}
+    h1{font-size:1.25rem; font-weight:700; letter-spacing:.3px; margin:0}
+    .modes{display:flex; gap:8px; flex-wrap:wrap}
+    .chip{border:1px solid #223041; background:#121a24; color:var(--muted); padding:8px 12px; border-radius:999px; cursor:pointer; transition:all .2s; font-weight:600}
+    .chip.active{background:linear-gradient(90deg, #1b2735, #15202b); color:var(--text); border-color:#2a3a4e}
+
+    .timer-wrap{display:grid; grid-template-columns: 280px 1fr; gap:24px; align-items:center}
+    @media (max-width:800px){.timer-wrap{grid-template-columns:1fr}}
+
+    .ring{width:280px; height:280px; display:grid; place-items:center; position:relative}
+    .ring svg{transform:rotate(-90deg)}
+    .time{position:absolute; text-align:center}
+    .time .mm{font-size:56px; font-weight:800; line-height:1}
+    .time .label{margin-top:6px; font-size:13px; color:var(--muted)}
+
+    .controls{display:flex; gap:12px; flex-wrap:wrap}
+    .btn{appearance:none; border:none; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer; background:#172231; color:var(--text); border:1px solid #223041; transition:transform .06s ease, background .2s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:linear-gradient(90deg, #2563eb, #22d3ee); color:#041019; border:none}
+    .btn.warn{background:linear-gradient(90deg, #ef4444, #f59e0b); color:#1a0f0f; border:none}
+
+    .panel{background:#0f1620; border:1px solid #1c2836; border-radius:16px; padding:16px}
+    .grid{display:grid; gap:12px; grid-template-columns:repeat(4, 1fr)}
+    @media (max-width:800px){.grid{grid-template-columns:repeat(2, 1fr)}}
+    label{display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--muted)}
+    input[type="number"], input[type="checkbox"]{accent-color:#60a5fa}
+    input[type="number"], select{background:#0b111a; border:1px solid #1e2a3a; color:var(--text); padding:10px 12px; border-radius:10px; width:100%}
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between}
+    .stats{display:flex; gap:16px; color:var(--muted); font-size:13px}
+    .stats strong{color:var(--text)}
+    footer{margin-top:16px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:12px}
+    .kbd{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background:#0b111a; border:1px solid #1e2a3a; padding:2px 6px; border-radius:6px; color:var(--text)}
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Pomodoro Timer">
+    <header>
+      <h1>⏳ Pomodoro</h1>
+      <div class="modes" role="tablist" aria-label="Modes">
+        <button class="chip active" data-mode="work" role="tab" aria-selected="true">Work</button>
+        <button class="chip" data-mode="short" role="tab" aria-selected="false">Short Break</button>
+        <button class="chip" data-mode="long" role="tab" aria-selected="false">Long Break</button>
+      </div>
+    </header>
+
+    <div class="timer-wrap">
+      <div class="ring" aria-live="polite">
+        <svg width="280" height="280" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="45" fill="none" stroke="#152334" stroke-width="8" />
+          <circle id="progress" cx="50" cy="50" r="45" fill="none" stroke="url(#grad)" stroke-width="8" stroke-linecap="round" stroke-dasharray="282.743" stroke-dashoffset="282.743" />
+          <defs>
+            <linearGradient id="grad" x1="0" x2="100%">
+              <stop offset="0%" stop-color="#60a5fa" />
+              <stop offset="100%" stop-color="#22d3ee" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="time">
+          <div class="mm" id="time">25:00</div>
+          <div class="label" id="label">Work session</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="controls" aria-label="Controls">
+          <button class="btn primary" id="start">Start (Space)</button>
+          <button class="btn" id="reset" title="Reset current session">Reset</button>
+          <button class="btn" id="skip" title="Skip to next">Skip</button>
+          <button class="btn warn" id="toggleAuto" title="Auto-start next session">Auto: Off</button>
+        </div>
+
+        <div class="grid" style="margin-top:14px">
+          <label>Work (min)
+            <input type="number" id="workMinutes" min="1" max="90" value="25" />
+          </label>
+          <label>Short Break (min)
+            <input type="number" id="shortMinutes" min="1" max="30" value="5" />
+          </label>
+          <label>Long Break (min)
+            <input type="number" id="longMinutes" min="5" max="60" value="15" />
+          </label>
+          <label>Long Break Every (sessions)
+            <input type="number" id="longEvery" min="2" max="12" value="4" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div class="stats">
+            <div>Pomodoros: <strong id="count">0</strong></div>
+            <div>Today: <strong id="today">00:00</strong></div>
+          </div>
+          <div>
+            <span class="kbd">Space</span> start/pause · <span class="kbd">N</span> next · <span class="kbd">R</span> reset
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>Sound + notifications when tab is in background.</div>
+      <div>Made for focus — no logins, no BS.</div>
+    </footer>
+  </div>
+
+  <audio id="beep" preload="auto">
+    <source src="https://upload.wikimedia.org/wikipedia/commons/0/0b/Beep-sound.ogg" type="audio/ogg">
+  </audio>
+
+  <script>
+    // --- State ---
+    const state = {
+      mode: 'work', // 'work' | 'short' | 'long'
+      durations: { work: 25*60, short: 5*60, long: 15*60 },
+      longEvery: 4,
+      remaining: 25*60,
+      running: false,
+      cycles: 0, // completed work sessions
+      startTs: null,
+      raf: null,
+      autoNext: false,
+      todaySecs: 0,
+      lastTickDay: new Date().toDateString(),
+    };
+
+    // --- Elements ---
+    const elTime = document.getElementById('time');
+    const elLabel = document.getElementById('label');
+    const elProgress = document.getElementById('progress');
+    const elCount = document.getElementById('count');
+    const elToday = document.getElementById('today');
+
+    const btnStart = document.getElementById('start');
+    const btnReset = document.getElementById('reset');
+    const btnSkip = document.getElementById('skip');
+    const btnAuto = document.getElementById('toggleAuto');
+
+    const inputs = {
+      work: document.getElementById('workMinutes'),
+      short: document.getElementById('shortMinutes'),
+      long: document.getElementById('longMinutes'),
+      every: document.getElementById('longEvery')
+    };
+
+    const chips = [...document.querySelectorAll('.chip')];
+
+    // --- Helpers ---
+    const fmt = (s)=>{
+      s = Math.max(0, Math.round(s));
+      const m = Math.floor(s/60).toString().padStart(2,'0');
+      const sec = Math.floor(s%60).toString().padStart(2,'0');
+      return `${m}:${sec}`;
+    }
+
+    const setTitle = ()=>{
+      const prefix = state.running ? '▶' : '⏸';
+      document.title = `${prefix} ${fmt(state.remaining)} • ${state.mode==='work'?'Focus':'Break'} — Pomodoro`;
+    }
+
+    const updateRing = ()=>{
+      const circumference = 2*Math.PI*45; // r=45
+      const total = state.durations[state.mode];
+      const progress = 1 - (state.remaining/total);
+      elProgress.style.strokeDasharray = `${circumference}`;
+      elProgress.style.strokeDashoffset = `${circumference * (1-progress)}`;
+    }
+
+    const updateUI = ()=>{
+      elTime.textContent = fmt(state.remaining);
+      elLabel.textContent = state.mode==='work' ? 'Work session' : (state.mode==='short' ? 'Short break' : 'Long break');
+      elCount.textContent = state.cycles;
+      elToday.textContent = fmt(state.todaySecs);
+      btnStart.textContent = state.running ? 'Pause (Space)' : 'Start (Space)';
+      btnAuto.textContent = `Auto: ${state.autoNext? 'On' : 'Off'}`;
+      chips.forEach(c=>{
+        const active = c.dataset.mode === state.mode;
+        c.classList.toggle('active', active);
+        c.setAttribute('aria-selected', active);
+      });
+      updateRing(); setTitle();
+    }
+
+    const switchMode = (mode)=>{
+      state.mode = mode;
+      state.remaining = state.durations[mode];
+      state.running = false; state.startTs = null; cancelAnimationFrame(state.raf);
+      updateUI();
+    }
+
+    const nextPhase = ()=>{
+      if(state.mode==='work'){
+        state.cycles++;
+        const isLong = (state.cycles % state.longEvery)===0;
+        switchMode(isLong?'long':'short');
+      } else {
+        switchMode('work');
+      }
+      if(state.autoNext) toggleRun(true);
+      ping();
+    }
+
+    const tick = (ts)=>{
+      if(!state.startTs) state.startTs = ts;
+      const delta = (ts - state.startTs)/1000;
+      const newRemaining = state.durations[state.mode] - delta;
+
+      // Track today focus seconds only for work & while running
+      const todayStr = new Date().toDateString();
+      if(todayStr !== state.lastTickDay){ state.todaySecs = 0; state.lastTickDay = todayStr; }
+      if(state.mode==='work') state.todaySecs++;
+
+      state.remaining = Math.max(0, newRemaining);
+      updateUI();
+      if(state.remaining<=0){
+        // done
+        state.running = false; state.startTs = null;
+        cancelAnimationFrame(state.raf);
+        nextPhase();
+        return;
+      }
+      state.raf = requestAnimationFrame(tick);
+    }
+
+    const toggleRun = (force)=>{
+      const shouldRun = typeof force==='boolean' ? force : !state.running;
+      if(shouldRun){
+        // restarting from paused state: keep remaining; set durations baseline
+        state.durations[state.mode] = Math.max(state.durations[state.mode], state.remaining);
+        state.running = true; state.startTs = performance.now() - (state.durations[state.mode]-state.remaining)*1000;
+        state.raf = requestAnimationFrame(tick);
+      } else {
+        state.running = false; cancelAnimationFrame(state.raf); state.startTs = null;
+      }
+      updateUI();
+    }
+
+    const reset = ()=>{
+      state.running = false; cancelAnimationFrame(state.raf); state.startTs = null;
+      state.remaining = state.durations[state.mode];
+      updateUI();
+    }
+
+    const ping = ()=>{
+      const audio = document.getElementById('beep');
+      audio.currentTime = 0; audio.play().catch(()=>{});
+      if(Notification && Notification.permission==='granted'){
+        const body = state.mode==='work'? 'Back to focus.' : (state.mode==='short'? 'Short break time!' : 'Long break time!');
+        new Notification('Pomodoro', { body });
+      }
+    }
+
+    // --- Wire up controls ---
+    btnStart.addEventListener('click', ()=>toggleRun());
+    btnReset.addEventListener('click', reset);
+    btnSkip.addEventListener('click', nextPhase);
+    btnAuto.addEventListener('click', ()=>{ state.autoNext=!state.autoNext; updateUI(); });
+
+    chips.forEach(chip=> chip.addEventListener('click', ()=> switchMode(chip.dataset.mode)) );
+
+    // Inputs
+    const syncFromInputs = ()=>{
+      state.durations.work = Math.max(60, (+inputs.work.value||25)*60);
+      state.durations.short = Math.max(30, (+inputs.short.value||5)*60);
+      state.durations.long = Math.max(60, (+inputs.long.value||15)*60);
+      state.longEvery = Math.max(2, (+inputs.every.value||4));
+      state.remaining = state.durations[state.mode];
+      updateUI();
+      localStorage.setItem('pomodoro_prefs', JSON.stringify({
+        work: inputs.work.value, short: inputs.short.value, long: inputs.long.value, every: inputs.every.value
+      }));
+    }
+    Object.values(inputs).forEach(i=> i.addEventListener('change', syncFromInputs));
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e)=>{
+      if(e.code==='Space'){ e.preventDefault(); toggleRun(); }
+      if(e.key==='n' || e.key==='N'){ nextPhase(); }
+      if(e.key==='r' || e.key==='R'){ reset(); }
+    });
+
+    // Load prefs
+    (function init(){
+      if('Notification' in window && Notification.permission!=='granted'){
+        Notification.requestPermission().catch(()=>{});
+      }
+      const saved = localStorage.getItem('pomodoro_prefs');
+      if(saved){
+        try{
+          const p = JSON.parse(saved);
+          inputs.work.value = p.work || inputs.work.value;
+          inputs.short.value = p.short || inputs.short.value;
+          inputs.long.value = p.long || inputs.long.value;
+          inputs.every.value = p.every || inputs.every.value;
+        }catch{}
+      }
+      syncFromInputs();
+    })();
+  </script>
+</body>
+</html>
